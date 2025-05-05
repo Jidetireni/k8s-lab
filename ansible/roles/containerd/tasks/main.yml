@@ -1,0 +1,97 @@
+---
+- name: Add Docker official GPG key
+  become: true
+  shell: |
+    sudo apt-get update
+    sudo apt-get install ca-certificates curl
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+- name: Add Docker repository
+  become: true
+  shell: |
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update
+
+# Task 2: Install containerd.io
+- name: Install containerd.io
+  apt:
+    name: containerd.io
+    state: present
+
+# Task 3: Configure containerd
+- name: Create containerd default configuration directory
+  file:
+    path: /etc/containerd
+    state: directory
+
+- name: Generate default containerd configuration
+  command: containerd config default
+  register: containerd_config
+  changed_when: false
+
+- name: Write containerd configuration file
+  copy:
+    content: "{{ containerd_config.stdout }}"
+    dest: /etc/containerd/config.toml
+    force: yes
+
+- name: Configure containerd to use systemd as the cgroup driver
+  lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^\s*SystemdCgroup\s*=\s*false'
+    line: '            SystemdCgroup = true'
+
+- name: Restart containerd service
+  systemd:
+    name: containerd
+    state: restarted
+    enabled: yes
+
+# Task 4: Install CNI Plugins
+- name: Create CNI plugins directory
+  file:
+    path: /opt/cni/bin
+    state: directory
+
+- name: Download CNI plugins archive
+  get_url:
+    url: "https://github.com/containernetworking/plugins/releases/download/v1.7.1/cni-plugins-linux-amd64-v1.7.1.tgz"
+    dest: /tmp/cni-plugins-linux-amd64-v1.7.1.tgz
+    checksum: "sha256:1a28a0506bfe5bcdc981caf1a49eeab7e72da8321f1119b7be85f22621013098"
+
+- name: Extract CNI plugins archive
+  command: >
+    tar -C /opt/cni/bin -xzvf /tmp/cni-plugins-linux-amd64-v1.7.1.tgz
+  args:
+    creates: /opt/cni/bin/bridge  
+
+- name: Remove CNI plugins archive
+  file:
+    path: /tmp/cni-plugins-linux-amd64-v1.7.1.tgz
+    state: absent
+
+# Task 5: Verify containerd and CNI setup
+- name: Check containerd service status
+  shell: systemctl is-active containerd
+  register: containerd_status
+  ignore_errors: true
+
+- name: Fail if containerd service is not active
+  fail:
+    msg: "Containerd service is not running properly!"
+  when: containerd_status.stdout != "active"
+
+- name: Verify CNI plugins installation
+  stat:
+    path: /opt/cni/bin/bridge
+  register: cni_plugins
+
+- name: Fail if CNI plugins are missing
+  fail:
+    msg: "CNI plugins were not installed successfully!"
+  when: not cni_plugins.stat.exists
