@@ -1,6 +1,15 @@
 ---
-- name: Install and config contain with cni plugins
+- name: Install and config contain with cni plugins and bootstrap cluster
   hosts: all
   become: true
   roles:
     - containerd
+    - bootstrap
+
+- name: Configure Kubernetes cluster
+  hosts: all
+  become: true
+  roles:
+    - kubernetes
+    
+
