@@ -1,0 +1,35 @@
+---
+#This playbook is used to bootstrap the Kubernetes cluster by installing the necessary packages and configuring the system.
+
+# Task 1: Install Kubernetes packages
+- name: Update the apt package index and install packages
+  become: true
+  shell: |
+    sudo apt-get update
+    sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    sudo apt-get update
+
+# Task 2: Install kubeadm, kubelet, and kubectl
+- name: Install Kubeadmin, Kubelet and Kubectl
+  become: true
+  apt:
+    name:
+      - kubeadm
+      - kubelet
+      - kubectl
+    state: present
+
+- name: Hold Kubeadm, Kubelet and Kubectl at current version
+  become: true
+  shell: |
+    sudo apt-mark hold kubeadm kubelet kubectl
+
+- name:  Enable the kubelet service before running kubeadm
+  become: true
+  systemd:
+    name: kubelet
+    enabled: true
+    state: started
