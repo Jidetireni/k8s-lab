@@ -1,0 +1,8 @@
+---
+# Include tasks for master nodes
+- include_tasks: master.yml
+  when: "'master' in group_names"
+
+# Include tasks for worker nodes
+- include_tasks: worker.yml
+  when: "'worker' in group_names"
