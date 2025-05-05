@@ -1,67 +1,74 @@
-# Automated Kubernetes homelab infrastructure on Digital Ocean 
+# Kubernetes Homelab Automation on Digital Ocean
 
-This project automates the setup of a Kubernetes cluster on DigitalOcean using Terraform and Ansible. It provisions the infrastructure, configures the nodes, and prepares the cluster environment for Kubernetes.
+This repository enables the seamless deployment of a Kubernetes homelab on DigitalOcean. Utilizing **Terraform** and **Ansible**, it automates the provisioning of infrastructure, node configuration, and cluster setup.
+
+---
 
 ## Features
 
-- **Infrastructure Provisioning**: 
-  - Creates a master node and two worker nodes with specified resources using Terraform.
-  - Sets up a Virtual Private Cloud (VPC) for secure communication between nodes.
-  - Configures a firewall to manage traffic and secure the cluster.
+### Infrastructure Provisioning
+- **Master and Worker Nodes**: Creates a master node and two worker nodes with specified resources.
+- **Networking**: Sets up a Virtual Private Cloud (VPC) for secure communication between nodes.
+- **Firewall**: Configures traffic rules to secure the Kubernetes cluster.
 
-- **Node Configuration**:
-  - Automates hostname assignment for nodes.
-  - Creates a user with sudo access and no-password privileges.
-  - Configures SSH access for secure remote management.
-  - Opens required ports in the firewall for Kubernetes.
-  - Installs container runtime (e.g., containerd).
+### Node Configuration
+- **Hostname Management**: Automatically assigns hostnames to nodes.
+- **User Setup**: Creates a user with sudo access and no-password privileges.
+- **SSH Access**: Configures secure remote access via SSH.
+- **Firewall Ports**: Opens necessary ports for Kubernetes operation.
+- **Container Runtime**: Installs `containerd` as the container runtime for Kubernetes.
+
+---
 
 ## Prerequisites
 
-- A DigitalOcean account and API token with read/write permissions.
-- Terraform installed on your local machine ([Download Terraform](https://www.terraform.io/downloads)).
-- Ansible installed on your local machine ([Install Ansible](https://docs.ansible.com/ansible/latest/installation_guide/index.html)).
-- An SSH key added to your DigitalOcean account for accessing droplets.
+1. A [DigitalOcean](https://www.digitalocean.com) account and API token with read/write permissions.
+2. [Terraform](https://www.terraform.io/downloads) installed locally.
+3. [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/index.html) installed locally.
+4. An SSH key added to your DigitalOcean account for accessing droplets.
+
+---
 
 ## Project Structure
 
-```
+```plaintext
 project-directory/
-├── terraform/
-│   ├── main.tf          # Main Terraform configuration
-│   ├── variables.tf     # Variables for Terraform
-│   ├── outputs.tf       # Outputs for Terraform
-│   ├── vpc.tf           # VPC configuration
-│   ├── firewall.tf      # Firewall configuration
-│   └── droplets/        # Droplet configuration
-│       └── main.tf
-└── ansible/
-    ├── inventory/
-    │   └── inventory.ini # Inventory file for Ansible
-    ├── playbooks/
-    │   └── site.yml      # Main playbook for Ansible
-    ├── roles/
-    │   ├── common/
-    │   │   ├── tasks/
-    │   │   │   └── main.yml
-    │   ├── containerd/
-    │   │   ├── tasks/
-    │   │   │   └── main.yml
-    │   ├── master/
-    │   │   ├── tasks/
-    │   │   │   └── main.yml
-    │   └── workers/
-    │       ├── tasks/
-    │       │   └── main.yml
-    └── group_vars/
-        ├── all.yml       # Shared variables for all hosts
-        ├── master.yml    # Variables specific to master nodes
-        └── workers.yml   # Variables specific to worker nodes
+   .
+   ├── README.md
+   ├── ansible
+   │   ├── inventory
+   │   │   ├── inventory.example.ini
+   │   │   └── inventory.ini
+   │   ├── playbook.yml
+   │   └── roles
+   │       ├── bootstrap
+   │       │   └── tasks
+   │       │       └── main.yml
+   │       ├── containerd
+   │       │   └── tasks
+   │       │       └── main.yml
+   │       └── kubernetes
+   │           └── tasks
+   │               ├── main.yml
+   │               ├── master.yml
+   │               └── worker.yml
+   └── terraform
+      ├── droplets
+      │   ├── main.tf
+      │   ├── terraform.tfvars
+      │   └── variables.tf
+      ├── firewall.tf
+      ├── main.tf
+      ├── terraform.tfvars
+      ├── variables.tf
+      └── vpc.tf
 ```
 
-## Usage
+---
 
-### Terraform
+## Usage Instructions
+
+### Step 1: Provision Infrastructure with Terraform
 
 1. **Initialize Terraform**:
    ```bash
@@ -78,23 +85,29 @@ project-directory/
    ```bash
    terraform apply
    ```
+
    - Terraform will provision the infrastructure, including droplets, VPC, and firewall.
 
-### Ansible
+---
 
-1. **Update Inventory**:
+### Step 2: Configure Nodes with Ansible
+
+1. **Update Inventory File**:
    - Edit `ansible/inventory/inventory.ini` to include the public IPs of the master and worker nodes created by Terraform.
 
-2. **Test Connection**:
+2. **Test SSH Connection**:
    ```bash
    ansible -i ansible/inventory/inventory.ini all -m ping
    ```
 
-3. **Run Playbook**:
+3. **Run the Playbook**:
    ```bash
    ansible-playbook -i ansible/inventory/inventory.ini ansible/playbooks/site.yml
    ```
+
    - Ansible will configure the nodes, set up the environment, and install the container runtime.
+
+---
 
 ## Configuration Details
 
@@ -113,31 +126,41 @@ The firewall is configured to allow traffic for the following Kubernetes ports:
 
 ### Container Runtime
 
-The playbook installs `containerd` as the container runtime, which is required for Kubernetes.
+- `containerd` is installed as the container runtime for Kubernetes.
+
+---
 
 ## Notes
 
 - Ensure that the API token and SSH key ID are securely stored and not hardcoded.
-- Modify the port ranges and IP addresses in the firewall rules as needed for your environment.
-- The playbook assumes Ubuntu 20.04 as the operating system for nodes.
+- Modify port ranges and IP addresses in the firewall rules as needed for your environment.
+- This setup assumes Ubuntu 20.04 as the operating system for all nodes.
+
+---
 
 ## Troubleshooting
 
-- **Terraform Issues**:
-  - Run `terraform refresh` to sync the state file with DigitalOcean if you encounter issues.
-  - Check the `terraform apply` output for errors and update your configuration if needed.
+### Terraform
+- Run `terraform refresh` to sync the state file with DigitalOcean.
+- Check the output of `terraform apply` for errors and update your configuration as necessary.
 
-- **Ansible Issues**:
-  - Use the `-vvv` flag with Ansible commands for detailed logs:
-    ```bash
-    ansible-playbook -i ansible/inventory/inventory.ini ansible/playbooks/site.yml -vvv
-    ```
-  - Ensure SSH access is properly configured for the `root` user during the initial setup.
+### Ansible
+- Use the `-vvv` flag with Ansible commands for detailed logs:
+  ```bash
+  ansible-playbook -i ansible/inventory/inventory.ini ansible/playbooks/site.yml -vvv
+  ```
+- Ensure SSH access is properly configured for the `root` user during the initial setup.
+
+---
 
 ## License
 
 This project is licensed under the MIT License.
 
+---
+
 ## Author
 
-Created by [Jidetireni](https://github.com/Jidetireni).
+Created and maintained by [Jidetireni](https://github.com/Jidetireni).
+
+---
