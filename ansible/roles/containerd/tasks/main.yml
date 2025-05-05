@@ -1,4 +1,8 @@
 ---
+# This playbook installs and configures containerd on Ubuntu 22.04
+# and sets up CNI plugins for networking.
+
+# Task 1: Install containerd dependencies
 - name: Add Docker official GPG key
   become: true
   shell: |
@@ -8,6 +12,7 @@
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     sudo chmod a+r /etc/apt/keyrings/docker.asc
 
+# Task 2: Add Docker repository
 - name: Add Docker repository
   become: true
   shell: |
@@ -17,13 +22,13 @@
       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update
 
-# Task 2: Install containerd.io
+# Task 3: Install containerd.io
 - name: Install containerd.io
   apt:
     name: containerd.io
     state: present
 
-# Task 3: Configure containerd
+# Task 4: Configure containerd
 - name: Create containerd default configuration directory
   file:
     path: /etc/containerd
@@ -45,6 +50,13 @@
     path: /etc/containerd/config.toml
     regexp: '^\s*SystemdCgroup\s*=\s*false'
     line: '            SystemdCgroup = true'
+
+- name: Ensure sandbox image is set in containerd configuration
+  lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^(\s*)sandbox_image\s*='
+    line: '  sandbox_image = "registry.k8s.io/pause:3.10"'
+    insertafter: '[plugins."io.containerd.grpc.v1.cri"]'
 
 - name: Restart containerd service
   systemd:
@@ -74,6 +86,8 @@
   file:
     path: /tmp/cni-plugins-linux-amd64-v1.7.1.tgz
     state: absent
+
+
 
 # Task 5: Verify containerd and CNI setup
 - name: Check containerd service status
