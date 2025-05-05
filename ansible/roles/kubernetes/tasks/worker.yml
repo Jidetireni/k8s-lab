@@ -1,0 +1,13 @@
+---
+# Task 1: Fetch kubeadm join command from the master node
+- name: Fetch kubeadm join command
+  fetch:
+    src: /tmp/kubeadm_join_command.sh
+    dest: /tmp/kubeadm_join_command.sh
+    flat: yes
+
+# Task 2: Join the Kubernetes cluster
+- name: Run kubeadm join command
+  command: bash /tmp/kubeadm_join_command.sh
+  args:
+    creates: /var/lib/kubelet/config.yaml
