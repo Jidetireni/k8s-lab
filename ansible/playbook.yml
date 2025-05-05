@@ -1,0 +1,6 @@
+---
+- name: Install and config contain with cni plugins
+  hosts: all
+  become: true
+  roles:
+    - containerd
